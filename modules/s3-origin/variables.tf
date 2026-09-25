@@ -12,5 +12,5 @@ variable "project_name" {
 
 variable "bucket_name" {
     type = string
-    default = "cloudfront-terraform-multiple-env"
+    description = "Name of the common bucket"
 }
