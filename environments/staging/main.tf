@@ -9,3 +9,10 @@ module "cloudfront" {
     s3_bucket_regional_domain_name  = module.s3_origin.bucket_regional_domain_name
     environment                     = "staging"
 }
+
+module "cloudwatch" {
+    source          = "../../modules/cloudwatch"
+    distribution_id = module.cloudfront.distribution_id
+    environment     = "staging"
+    alarm_email     = "syedrazvi.dev@gmail.com"
+}
