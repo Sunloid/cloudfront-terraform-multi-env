@@ -14,3 +14,7 @@ variable "bucket_name" {
     type = string
     description = "Name of the common bucket"
 }
+
+variable "cloudfront_distribution_arn" {
+    type = string 
+}
