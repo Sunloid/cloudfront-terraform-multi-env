@@ -37,3 +37,11 @@ resource "aws_cloudfront_distribution" "this" {
     cloudfront_default_certificate = true
   }
 }
+
+resource "aws_cloudfront_function" "security_headers" {
+  name    = "${var.environment}-security-headers"
+  runtime = "cloudfront-js-2.0"
+  comment = "Adds HSTS header to responses"
+  publish = true
+  code    = file("${path.module}/edge-function.js")
+}

@@ -41,10 +41,17 @@ flowchart LR
 │   │   ├── main.tf
 │   │   ├── variables.tf
 │   │   └── outputs.tf
-│   └── cloudfront/         # CloudFront distribution + OAC
+│   │
+│   ├─── cloudfront/         # CloudFront distribution + OAC
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   │
+│   └── cloudwatch/         
 │       ├── main.tf
 │       ├── variables.tf
 │       └── outputs.tf
+│   
 └── environments/
     ├── dev/
     │   ├── backend.tf      # Remote state config (unique state key per env)
