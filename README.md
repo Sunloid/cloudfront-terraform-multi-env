@@ -10,7 +10,8 @@ This project was built as hands-on practice for AWS infrastructure engineering w
 - Provisions a **CloudFront distribution** per environment, pointed at that environment's S3 bucket, with HTTPS enforced.
 - Uses **one shared Terraform module** for each piece of infrastructure (`modules/s3-origin`, `modules/cloudfront`), called separately by each environment with its own variable values — so `dev`, `staging`, and `prod` are fully independent, isolated stacks built from identical, reusable code.
 - Stores Terraform state remotely in S3 with DynamoDB state locking, so state is safe and shareable rather than sitting on a single machine.
-- (In progress) Adds CloudWatch dashboards, metrics, and alarms per distribution.
+- Adds a **CloudFront Function** (`security_headers`) that attaches an HSTS header to every response, on top of the HTTPS redirect already enforced at the distribution level.
+- Adds **CloudWatch dashboards, a 5xx error-rate alarm, and SNS email notifications** per distribution.
 
 ## Architecture
 
@@ -41,25 +42,25 @@ flowchart LR
 │   │   ├── main.tf
 │   │   ├── variables.tf
 │   │   └── outputs.tf
-│   │
-│   ├─── cloudfront/         # CloudFront distribution + OAC
+│   ├── cloudfront/         # CloudFront distribution + OAC + edge function
 │   │   ├── main.tf
 │   │   ├── variables.tf
-│   │   └── outputs.tf
-│   │
-│   └── cloudwatch/         
+│   │   ├── outputs.tf
+│   │   └── edge-function.js
+│   └── cloudwatch/         # Dashboard, 5xx alarm, SNS notifications
 │       ├── main.tf
-│       ├── variables.tf
-│       └── outputs.tf
-│   
-└── environments/
-    ├── dev/
-    │   ├── backend.tf      # Remote state config (unique state key per env)
-    │   ├── providers.tf
-    │   ├── variables.tf
-    │   └── main.tf         # Calls both modules with dev-specific values
-    ├── staging/
-    └── prod/
+│       └── variables.tf
+├── environments/
+│   ├── dev/
+│   │   ├── backend.tf      # Remote state config (unique state key per env)
+│   │   ├── providers.tf
+│   │   ├── variables.tf
+│   │   ├── main.tf         # Calls all three modules with env-specific values
+│   │   └── outputs.tf
+│   ├── staging/
+│   └── prod/
+├── CONFIGURATION_INVENTORY.md
+└── README.md
 ```
 
 Each `environments/<name>` folder is an independent Terraform root module: its own state file, its own `terraform init`/`plan`/`apply`, with no shared state between environments. This means an issue in `dev` can never affect `staging` or `prod`.
@@ -105,6 +106,16 @@ Creates a private S3 bucket with all public access blocked, plus a bucket policy
 Creates an Origin Access Control (OAC) resource and a CloudFront distribution configured with a single default cache behavior, HTTPS-only viewer traffic, and no geographic restrictions. Outputs the distribution's ARN, ID, and public domain name for use elsewhere.
 
 The two modules reference each other's outputs (the S3 module needs the CloudFront distribution's ARN for its bucket policy; the CloudFront module needs the S3 bucket's regional domain name as its origin) — Terraform resolves this dependency automatically via its graph, regardless of the order resources are declared in.
+
+## Live deployments
+
+All three environments were deployed, validated with `curl` header/cache checks, and confirmed to have their S3 origins unreachable directly (OAC working as intended). Real Distribution IDs and domain names are tracked in [`CONFIGURATION_INVENTORY.md`](./CONFIGURATION_INVENTORY.md).
+
+| Dev | Staging | Prod |
+|---|---|---|
+| ![Dev deployment](./screenshots/dev.png) | ![Staging deployment](./screenshots/staging.png) | ![Prod deployment](./screenshots/prod.png) |
+
+> Note: the test page's footer text is a static string baked into `index.html` at upload time, so it reads "environment: dev" on every distribution regardless of which environment actually served it — the distinguishing proof is the unique `*.cloudfront.net` domain in each screenshot's address bar, not the page text itself.
 
 ## Validation
 
